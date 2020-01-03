@@ -9,7 +9,7 @@ wget http://cdimage.ubuntu.com/releases/bionic/release/ubuntu-18.04.3-preinstall
 #### 解压并安装
 
 ```
-# 找出U盘挂载的路径
+# 找出TF卡挂载的路径
 diskutil list
 # 卸载TF卡
 diskutil unmount /Volumes/usb
