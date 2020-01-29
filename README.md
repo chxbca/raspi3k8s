@@ -2,13 +2,13 @@
 
 #### 下载镜像
 
-```
+```shell
 wget http://cdimage.ubuntu.com/releases/bionic/release/ubuntu-18.04.3-preinstalled-server-armhf+raspi3.img.xz
 ```
 
 #### 解压并安装
 
-```
+```shell
 # 找出TF卡挂载的路径
 diskutil list
 # 卸载TF卡
@@ -26,7 +26,7 @@ sudo dd if=${input} of=${output} bs=${block size}
 
 #### 使用 SSH 连接树莓派
 
-```
+```shell
 # 初次连接 密码默认ubuntu 初次登陆会让你修改密码
 ssh ubuntu@${ip}
 
@@ -74,7 +74,7 @@ deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ bionic-security main rest
 ```
 
 #### 安装 docker-ce
-```
+```shell
 sudo apt-get update
 sudo apt-get install -y \
     apt-transport-https \
@@ -91,7 +91,7 @@ sudo apt-get install -y docker-ce docker-ce-cli containerd.io
 ```
 
 #### 配置 Docker 加速器
-```
+```shell
 sudo echo '{
   "registry-mirrors": [
     "https://registry.docker-cn.com"
@@ -102,7 +102,7 @@ sudo mv daemon.json /etc/docker/
 
 
 #### 安装 kubelet kubeadm kubectl
-```
+```shell
 curl -fsSL 'https://mirrors.aliyun.com/kubernetes/apt/doc/apt-key.gpg' | sudo apt-key add - 
 sudo echo 'deb https://mirrors.aliyun.com/kubernetes/apt/ kubernetes-xenial main' >> kubernetes.list
 sudo mv kubernetes.list /etc/apt/sources.list.d/
@@ -115,15 +115,17 @@ sudo apt-mark hold kubeadm kubelet kubectl
 
 #### 配置 master 节点
 
-```
+```shell
 # 创建 docker 文件夹
-mkdir /usr/local/docker/
+sudo mkdir /usr/local/docker/
 
 # 创建 kubernetes 文件夹
-mkdir /usr/local/docker/kubernetes
+sudo mkdir /usr/local/docker/kubernetes
 
 # 导出配置文件
-kubeadm config print init-defaults --kubeconfig ClusterConfiguration > kubeadm.yml
+sudo kubeadm config print init-defaults --kubeconfig ClusterConfiguration > kubeadm.yml
+
+sudo vim kubeadm.yml
 
 ……
 localAPIEndpoint:
@@ -140,23 +142,23 @@ networking:
 ……
 
 # kubernetes 初始化 1.15 版本前 --upload-certs 改为 --experimental-upload-certs 
-kubeadm init --config=kubeadm.yml --upload-certs | tee kubeadm-init.log
+sudo kubeadm init --config=kubeadm.yml --upload-certs | tee kubeadm-init.log
 
 # 安装网络插件 calico
-kubectl apply -f https://docs.projectcalico.org/v3.10/manifests/calico.yaml
+sudo kubectl apply -f https://docs.projectcalico.org/v3.10/manifests/calico.yaml
 ```
 
 #### 配置 node 节点
-```
+```shell
 # 在初始化 master 节点时，若成功，在控制台和 kubeadm-init.log 文件中
 # 会有如下命令，在安装完 kubeadm kubelet kubectl 后，直接复制输入即可
 
 # 添加 master 节点
-kubeadm join ${ip:port} --token ${token} \
+sudo kubeadm join ${ip:port} --token ${token} \
     --discovery-token-ca-cert-hash sha256:${sha256}
     --control-plane --certificate-key ${certificate-key}
 
 # 添加 node 节点
-kubeadm join ${ip:port} --token ${token} \
+sudo kubeadm join ${ip:port} --token ${token} \
     --discovery-token-ca-cert-hash sha256:${sha256}
 ```
