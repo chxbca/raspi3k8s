@@ -139,7 +139,7 @@ networking:
   podSubnet: "192.168.0.0/16"
 ……
 
-# kubernetes 初始化 1.15版本前 --upload-certs 改为 --experimental-upload-certs 
+# kubernetes 初始化 1.15 版本前 --upload-certs 改为 --experimental-upload-certs 
 kubeadm init --config=kubeadm.yml --upload-certs | tee kubeadm-init.log
 
 # 安装网络插件 calico
@@ -150,10 +150,13 @@ kubectl apply -f https://docs.projectcalico.org/v3.10/manifests/calico.yaml
 ```
 # 在初始化 master 节点时，若成功，在控制台和 kubeadm-init.log 文件中
 # 会有如下命令，在安装完 kubeadm kubelet kubectl 后，直接复制输入即可
+
+# 添加 master 节点
 kubeadm join ${ip:port} --token ${token} \
     --discovery-token-ca-cert-hash sha256:${sha256}
     --control-plane --certificate-key ${certificate-key}
 
+# 添加 node 节点
 kubeadm join ${ip:port} --token ${token} \
     --discovery-token-ca-cert-hash sha256:${sha256}
 ```
