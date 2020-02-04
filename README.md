@@ -132,8 +132,11 @@ localAPIEndpoint:
   # 修改为主节点 IP
   advertiseAddress: ${ip}
 ……
-# 要配置高可用集群需添加这一条
-controlPlaneEndpoint: "${ip}:6443"
+# 要配置高可用集群需在 controllerManager: {} 上添加这一条
+controlPlaneEndpoint: "${ip}:6444"
+……
+# 国内不能访问 Google，修改为阿里云
+imageRepository: registry.aliyuncs.com/google_containers
 ……
 networking:
   dnsDomain: cluster.local
