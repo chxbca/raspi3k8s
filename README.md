@@ -92,20 +92,23 @@ sudo apt-get install -y docker-ce docker-ce-cli containerd.io
 
 #### 配置 Docker 加速器
 ```shell
-sudo echo '{
-  "registry-mirrors": [
-    "https://registry.docker-cn.com"
-  ]
-}' >> daemon.json
-sudo mv daemon.json /etc/docker/
+sudo mkdir -p /etc/docker
+sudo tee /etc/docker/daemon.json <<-'EOF'
+{
+  "registry-mirrors": ["https://uqvzue7x.mirror.aliyuncs.com"]
+}
+EOF
+sudo systemctl daemon-reload
+sudo systemctl restart docker
 ```
 
 
 #### 安装 kubelet kubeadm kubectl
 ```shell
 curl -fsSL 'https://mirrors.aliyun.com/kubernetes/apt/doc/apt-key.gpg' | sudo apt-key add - 
-sudo echo 'deb https://mirrors.aliyun.com/kubernetes/apt/ kubernetes-xenial main' >> kubernetes.list
-sudo mv kubernetes.list /etc/apt/sources.list.d/
+sudo tee /etc/apt/sources.list.d/kubernetes.list <<-'EOF'
+deb https://mirrors.aliyun.com/kubernetes/apt/ kubernetes-xenial main
+EOF
 sudo apt-get update
 sudo apt-get install -y kubelet kubeadm kubectl
 sudo apt-mark hold kubeadm kubelet kubectl
@@ -116,16 +119,10 @@ sudo apt-mark hold kubeadm kubelet kubectl
 #### 配置 master 节点
 
 ```shell
-# 创建 docker 文件夹
-sudo mkdir /usr/local/docker/
-
-# 创建 kubernetes 文件夹
-sudo mkdir /usr/local/docker/kubernetes
-
 # 导出配置文件
-sudo kubeadm config print init-defaults --kubeconfig ClusterConfiguration > kubeadm.yml
+sudo kubeadm config print init-defaults --kubeconfig ClusterConfiguration > kubeconfig.yml
 
-sudo vim kubeadm.yml
+sudo vim kubeconfig.yml
 
 ……
 localAPIEndpoint:
@@ -133,7 +130,7 @@ localAPIEndpoint:
   advertiseAddress: ${ip}
 ……
 # 要配置高可用集群需在 controllerManager: {} 上添加这一条
-controlPlaneEndpoint: "${ip}:6444"
+controlPlaneEndpoint: "${vip_ip}:6444"
 ……
 # 国内不能访问 Google，修改为阿里云
 imageRepository: registry.aliyuncs.com/google_containers
@@ -145,7 +142,7 @@ networking:
 ……
 
 # kubernetes 初始化 1.15 版本前 --upload-certs 改为 --experimental-upload-certs 
-sudo kubeadm init --config=kubeadm.yml --upload-certs | tee kubeadm-init.log
+sudo kubeadm init --config=kubeconfig.yml --upload-certs | tee kubeadm-init.log
 
 # 安装网络插件 calico
 sudo kubectl apply -f https://docs.projectcalico.org/v3.10/manifests/calico.yaml
