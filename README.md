@@ -114,6 +114,58 @@ sudo apt-get install -y kubelet kubeadm kubectl
 sudo apt-mark hold kubeadm kubelet kubectl
 ```
 
+### 安装 HAProxy + Keepalived
+
+#### 安装HAProxy
+
+```shell
+#!/bin/bash
+# 修改为你自己的 Master 地址
+MasterIP1=192.168.141.150
+MasterIP2=192.168.141.151
+MasterIP3=192.168.141.152
+# 这是 kube-apiserver 默认端口，不用修改
+MasterPort=6443
+
+# 容器将 HAProxy 的 6444 端口暴露出去
+docker run -d --restart=always --name HAProxy-K8S -p 6444:6444 \
+        -e MasterIP1=$MasterIP1 \
+        -e MasterIP2=$MasterIP2 \
+        -e MasterIP3=$MasterIP3 \
+        -e MasterPort=$MasterPort \
+        wise2c/haproxy-k8s
+```
+
+#### 安装Keepalived
+```shell
+#!/bin/bash
+# 修改为你自己的虚拟 IP 地址
+VIRTUAL_IP=192.168.141.200
+# 虚拟网卡设备名
+INTERFACE=ens33
+# 虚拟网卡的子网掩码
+NETMASK_BIT=24
+# HAProxy 暴露端口，内部指向 kube-apiserver 的 6443 端口
+CHECK_PORT=6444
+# 路由标识符
+RID=10
+# 虚拟路由标识符
+VRID=160
+# IPV4 多播地址，默认 224.0.0.18
+MCAST_GROUP=224.0.0.18
+
+docker run -itd --restart=always --name=Keepalived-K8S \
+        --net=host --cap-add=NET_ADMIN \
+        -e VIRTUAL_IP=$VIRTUAL_IP \
+        -e INTERFACE=$INTERFACE \
+        -e CHECK_PORT=$CHECK_PORT \
+        -e RID=$RID \
+        -e VRID=$VRID \
+        -e NETMASK_BIT=$NETMASK_BIT \
+        -e MCAST_GROUP=$MCAST_GROUP \
+        wise2c/keepalived-k8s
+```
+
 ### 配置 kubernetes 集群
 
 #### 配置 master 节点
