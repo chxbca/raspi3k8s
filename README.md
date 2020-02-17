@@ -95,7 +95,18 @@ sudo apt-get install -y docker-ce docker-ce-cli containerd.io
 sudo mkdir -p /etc/docker
 sudo tee /etc/docker/daemon.json <<-'EOF'
 {
-  "registry-mirrors": ["https://uqvzue7x.mirror.aliyuncs.com"]
+  "exec-opts": ["native.cgroupdriver=systemd"],
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "100m"
+  },
+  "registry-mirrors": [
+    "https://uqvzue7x.mirror.aliyuncs.com",
+    "https://k7da99jp.mirror.aliyuncs.com",
+    "https://dockerhub.azk8s.cn",
+    "https://registry.docker-cn.com"
+  ],
+  "storage-driver": "overlay2"
 }
 EOF
 sudo systemctl daemon-reload
@@ -110,11 +121,11 @@ sudo tee /etc/apt/sources.list.d/kubernetes.list <<-'EOF'
 deb https://mirrors.aliyun.com/kubernetes/apt/ kubernetes-xenial main
 EOF
 sudo apt-get update
-sudo apt-get install -y kubelet kubeadm kubectl
+sudo apt-get install -y kubelet=1.15.4-00 kubeadm=1.15.4-00 kubectl=1.15.4-00
 sudo apt-mark hold kubeadm kubelet kubectl
 ```
 
-### 安装 HAProxy + Keepalived
+### 安装 HAProxy + Keepalived （仅高可用需要）
 
 #### 安装HAProxy
 
@@ -128,7 +139,7 @@ MasterIP3=192.168.141.152
 MasterPort=6443
 
 # 容器将 HAProxy 的 6444 端口暴露出去
-docker run -d --restart=always --name HAProxy-K8S -p 6444:6444 \
+sudo docker run -d --restart=always --name HAProxy-K8S -p 6444:6444 \
         -e MasterIP1=$MasterIP1 \
         -e MasterIP2=$MasterIP2 \
         -e MasterIP3=$MasterIP3 \
@@ -154,7 +165,7 @@ VRID=160
 # IPV4 多播地址，默认 224.0.0.18
 MCAST_GROUP=224.0.0.18
 
-docker run -itd --restart=always --name=Keepalived-K8S \
+sudo docker run -itd --restart=always --name=Keepalived-K8S \
         --net=host --cap-add=NET_ADMIN \
         -e VIRTUAL_IP=$VIRTUAL_IP \
         -e INTERFACE=$INTERFACE \
@@ -172,7 +183,7 @@ docker run -itd --restart=always --name=Keepalived-K8S \
 
 ```shell
 # 导出配置文件
-sudo kubeadm config print init-defaults --kubeconfig ClusterConfiguration > kubeconfig.yml
+sudo kubeadm config print init-defaults --kubeconfig ClusterConfiguration > kubeadm.yml
 
 sudo vim kubeconfig.yml
 
@@ -189,18 +200,24 @@ imageRepository: registry.aliyuncs.com/google_containers
 ……
 networking:
   dnsDomain: cluster.local
-  # 配置成 Calico 的默认网段 可能没有podSubnet，自行添加
-  podSubnet: "192.168.0.0/16"
+  # 配置成 Calico 的网段 可能没有podSubnet，自行添加
+  # 要注意，节点IP不能和Calico的网段相重合
+  podSubnet: "10.244.0.0/16"
 ……
 
 # kubernetes 初始化 1.15 版本前 --upload-certs 改为 --experimental-upload-certs 
-sudo kubeadm init --config=kubeconfig.yml --upload-certs | tee kubeadm-init.log
+sudo kubeadm init --config=kubeadm.yml --upload-certs | tee kubeadm-init.log
 
 # 安装网络插件 calico
-sudo kubectl apply -f https://docs.projectcalico.org/v3.10/manifests/calico.yaml
+wget https://docs.projectcalico.org/v3.10/manifests/calico.yaml
+
+# 修改网络配置 值要对应 kubeadm.yml 中的 networking.podSubnet
+vi calico.yaml
+
+kubectl apply -f calico.yaml
 ```
 
-#### 配置 node 节点
+#### 加入其他节点
 ```shell
 # 在初始化 master 节点时，若成功，在控制台和 kubeadm-init.log 文件中
 # 会有如下命令，在安装完 kubeadm kubelet kubectl 后，直接复制输入即可
@@ -214,3 +231,5 @@ sudo kubeadm join ${ip:port} --token ${token} \
 sudo kubeadm join ${ip:port} --token ${token} \
     --discovery-token-ca-cert-hash sha256:${sha256}
 ```
+
+- 下一节: [在 Kubernetes 集群上安装 Istio](INSTALL_ISTIO.md)
